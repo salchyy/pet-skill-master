@@ -36,28 +36,31 @@ module.exports = function petmaster(mod) {
         cooldownTimeout = setTimeout(() => isOnCooldown = false, event.cooldown);
     }
 
-    function handlePetSpawn(event) {
-        if (event.ownerId !== mod.game.me.gameId || !event.abilities[0]?.active) return;
+	function handlePetSpawn(event) {
+		if (event.ownerId !== mod.game.me.gameId) return;
 
-        petState.skill = skillMapping[getKeyByValue(requirements, event.abilities[0].id)];
-        if (petState.skill) {
-            petState.spawned = true;
-            petState.id = event.gameId;
-            tryUsePetSkill();
-        }
-    }
+		for (const ability of event.abilities) {
+			if (ability.active) {
+				petState.skill = skillMapping[getKeyByValue(requirements, ability.id)];
+				if (petState.skill) {
+					petState.spawned = true;
+					petState.id = event.gameId;
+					tryUsePetSkill();
+					break; // Salimos del bucle una vez encontrada la habilidad correspondiente
+				}
+			}
+		}
+	}
 
     function handlePetDespawn(event) {
         if (event.gameId === petState.id && event.despawnType === 0) {
             petState = { spawned: false, id: null, skill: null };
-            if (enabled) mod.command.message("Pet despawned");
         }
     }
 
     function tryUsePetSkill() {
         if (!isOnCooldown && petState.spawned && petState.id && petState.skill && enabled) {
             mod.send("C_START_SERVANT_ACTIVE_SKILL", 99, { unk1: 0, unk2: 0, gameId: petState.id, petskill: petState.skill });
-            mod.command.message("Pet skill was out of cooldown, packet sent");
         }
     }
 
